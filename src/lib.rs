@@ -59,9 +59,12 @@ impl<B: Bitstream> BitstreamExt for B {
         leftover -= size;
         let mut leftover_size: u64 = (1 << bits_needed) - size;
         loop {
-            // We need to increase leftover_size to >= size, by adding bits
-            let mut bits_needed = leftover_size.leading_zeros() - size_leading_zeros;
-            if (leftover_size << bits_needed) < size {
+            // We need to increase leftover_size to >= size, by adding bits.
+            // We could do some fancy leading_zeros thing for this,
+            // but the expected value of bits needed given that we reach this code
+            // is only something like 2, so the loop is faster.
+            let mut bits_needed = 1;
+            while (leftover_size << bits_needed) < size {
                 bits_needed += 1;
             }
             leftover += self.gen_bits(bits_needed) * leftover_size;
