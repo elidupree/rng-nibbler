@@ -177,6 +177,7 @@ mod tests {
                 bitstream.gen_range(range_size as u64);
             }
             dbg!((range_size, bitstream.count));
+            assert!(bitstream.count as f64 <= (range_size as f64).log2() * 2.0 * 10000.0,);
         }
     }
 }
