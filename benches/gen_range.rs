@@ -20,8 +20,8 @@ pub const TEST_RANGE_SIZES: &'static [u64] = &[
     (1 << 31) - 1,
     1 << 31,
     (1 << 31) + 1,
-    u64::MAX - 1,
-    u64::MAX,
+    (1 << 62) + 1,
+    (1 << 63) - 1,
 ];
 
 fn gen_range(c: &mut Criterion) {

@@ -50,13 +50,13 @@ pub trait BitstreamExt {
 
 impl<B: Bitstream> BitstreamExt for B {
     fn gen_range(&mut self, size: u64) -> u64 {
-        let mut leftover = 0;
-        let mut leftover_size = 1;
+        let mut leftover: u64 = 0;
+        let mut leftover_size: u64 = 1;
+        let size_leading_zeros = size.leading_zeros();
         loop {
             // We need to increase leftover_size to >= size, by adding bits
-            // I'm sure there's a clever bit math way, but for prototyping,
-            let mut bits_needed = 0;
-            while (leftover_size << bits_needed) < size {
+            let mut bits_needed = leftover_size.leading_zeros() - size_leading_zeros;
+            if (leftover_size << bits_needed) < size {
                 bits_needed += 1;
             }
             leftover += self.gen_bits(bits_needed) * leftover_size;
