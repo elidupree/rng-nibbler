@@ -44,9 +44,35 @@ impl<T: Rng> Bitstream for RngBitstream<T> {
     }
 }
 
+pub trait BitstreamExt {
+    fn gen_range(&mut self, size: u64) -> u64;
+}
+
+impl<B: Bitstream> BitstreamExt for B {
+    fn gen_range(&mut self, size: u64) -> u64 {
+        let mut leftover = 0;
+        let mut leftover_size = 1;
+        loop {
+            // We need to increase leftover_size to >= size, by adding bits
+            // I'm sure there's a clever bit math way, but for prototyping,
+            let mut bits_needed = 0;
+            while (leftover_size << bits_needed) < size {
+                bits_needed += 1;
+            }
+            leftover += self.gen_bits(bits_needed) * leftover_size;
+            leftover_size <<= bits_needed;
+            if leftover < size {
+                return leftover;
+            }
+            leftover -= size;
+            leftover_size -= size;
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::{Bitstream, RngBitstream};
+    use crate::{Bitstream, BitstreamExt, RngBitstream};
     use rand::{Rng, SeedableRng};
     use rand_chacha::ChaChaRng;
 
@@ -86,6 +112,34 @@ mod tests {
                     frequency,
                     bit_index,
                     num_bits
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn gen_range_gens_reasonably_distributed_values() {
+        let mut rng = ChaChaRng::seed_from_u64(0);
+        let mut bitstream = RngBitstream::new(ChaChaRng::seed_from_u64(0));
+        let mut buckets: Vec<Vec<u64>> = (0..18)
+            .map(|range_size| (0..range_size).map(|_| 0).collect())
+            .collect();
+        for _ in 0..1000000 {
+            let range_size = rng.gen_range(1..18);
+            let value = bitstream.gen_range(range_size as u64);
+            assert!(value < range_size);
+            buckets[range_size as usize][value as usize] += 1;
+        }
+        for (range_size, bucket) in buckets.into_iter().enumerate() {
+            let total_count = bucket.iter().sum::<u64>();
+            for (value, &count) in bucket.iter().enumerate() {
+                let share = count as f64 * range_size as f64 / total_count as f64;
+                assert!(
+                    share > 0.9 && share < 1.1,
+                    "extreme frequency {} at value {}/{}",
+                    share,
+                    value,
+                    range_size
                 );
             }
         }
