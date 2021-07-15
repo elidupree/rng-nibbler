@@ -50,9 +50,14 @@ pub trait BitstreamExt {
 
 impl<B: Bitstream> BitstreamExt for B {
     fn gen_range(&mut self, size: u64) -> u64 {
-        let mut leftover: u64 = 0;
-        let mut leftover_size: u64 = 1;
-        let size_leading_zeros = size.leading_zeros();
+        let size_leading_zeros = (size - 1).leading_zeros();
+        let bits_needed = 64 - size_leading_zeros;
+        let mut leftover: u64 = self.gen_bits(bits_needed);
+        if leftover < size {
+            return leftover;
+        }
+        leftover -= size;
+        let mut leftover_size: u64 = (1 << bits_needed) - size;
         loop {
             // We need to increase leftover_size to >= size, by adding bits
             let mut bits_needed = leftover_size.leading_zeros() - size_leading_zeros;
@@ -60,10 +65,10 @@ impl<B: Bitstream> BitstreamExt for B {
                 bits_needed += 1;
             }
             leftover += self.gen_bits(bits_needed) * leftover_size;
-            leftover_size <<= bits_needed;
             if leftover < size {
                 return leftover;
             }
+            leftover_size <<= bits_needed;
             leftover -= size;
             leftover_size -= size;
         }
@@ -130,6 +135,7 @@ mod tests {
             assert!(value < range_size);
             buckets[range_size as usize][value as usize] += 1;
         }
+        dbg!(&buckets);
         for (range_size, bucket) in buckets.into_iter().enumerate() {
             let total_count = bucket.iter().sum::<u64>();
             for (value, &count) in bucket.iter().enumerate() {
