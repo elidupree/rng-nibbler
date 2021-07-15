@@ -1,4 +1,5 @@
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
+use rand::distributions::{Distribution, Uniform};
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaChaRng;
 use rand_pcg::Pcg64Mcg;
@@ -34,22 +35,12 @@ fn gen_range(c: &mut Criterion) {
         group.bench_with_input(
             BenchmarkId::new("ChaChaRng", range_size),
             &range_size,
-            |b, &range_size| b.iter(|| chacha.gen_range(0..range_size)),
-        );
-        group.bench_with_input(
-            BenchmarkId::new("RngBitstream<ChaChaRng>", range_size),
-            &range_size,
-            |b, &range_size| b.iter(|| chacha_bitstream.gen_range(range_size)),
+            |b, &range_size| b.iter(|| Uniform::new(0, range_size).sample(&mut chacha)),
         );
         group.bench_with_input(
             BenchmarkId::new("Pcg64Mcg", range_size),
             &range_size,
-            |b, &range_size| b.iter(|| pcg.gen_range(0..range_size)),
-        );
-        group.bench_with_input(
-            BenchmarkId::new("RngBitstream<Pcg64Mcg>", range_size),
-            &range_size,
-            |b, &range_size| b.iter(|| pcg_bitstream.gen_range(range_size)),
+            |b, &range_size| b.iter(|| Uniform::new(0, range_size).sample(&mut pcg)),
         );
     }
     group.finish();
