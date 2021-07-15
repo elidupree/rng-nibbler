@@ -51,7 +51,7 @@ impl<T: Rng> Bitstream for RngBitstream<T> {
 
 impl<T: Rng> Bitstream for CountingRngBitstream<T> {
     fn gen_bits(&mut self, num_bits: u32) -> u64 {
-        self.count += num_bits as u64Iinhim;
+        self.count += num_bits as u64;
         self.bitstream.gen_bits(num_bits)
     }
 }
