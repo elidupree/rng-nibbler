@@ -10,6 +10,11 @@ pub struct RngBitstream<T> {
     unused_bits: u32,
 }
 
+pub struct CountingRngBitstream<T> {
+    bitstream: RngBitstream<T>,
+    count: u64,
+}
+
 impl<T> RngBitstream<T> {
     pub fn new(rng: T) -> Self {
         RngBitstream {
@@ -41,6 +46,13 @@ impl<T: Rng> Bitstream for RngBitstream<T> {
             self.unused_bits = 64 - extra_bits;
         }
         result
+    }
+}
+
+impl<T: Rng> Bitstream for CountingRngBitstream<T> {
+    fn gen_bits(&mut self, num_bits: u32) -> u64 {
+        self.count += num_bits as u64Iinhim;
+        self.bitstream.gen_bits(num_bits)
     }
 }
 
@@ -80,7 +92,7 @@ impl<B: Bitstream> BitstreamExt for B {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Bitstream, BitstreamExt, RngBitstream};
+    use crate::{Bitstream, BitstreamExt, CountingRngBitstream, RngBitstream};
     use rand::{Rng, SeedableRng};
     use rand_chacha::ChaChaRng;
 
@@ -151,6 +163,20 @@ mod tests {
                     range_size
                 );
             }
+        }
+    }
+
+    #[test]
+    fn gen_range_uses_reasonable_bit_counts() {
+        for range_size in 1..=17 {
+            let mut bitstream = CountingRngBitstream {
+                bitstream: RngBitstream::new(ChaChaRng::seed_from_u64(0)),
+                count: 0,
+            };
+            for _ in 0..10000 {
+                bitstream.gen_range(range_size as u64);
+            }
+            dbg!((range_size, bitstream.count));
         }
     }
 }
